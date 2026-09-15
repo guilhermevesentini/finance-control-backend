@@ -35,7 +35,7 @@ app.use(express.json());
 
 app.get("/health", (_req, res) => ok(res, { mongo: true }));
 
-app.use(createAuthRouter(mongoUsersRepository));
+app.use(createAuthRouter(mongoUsersRepository, mongoCategoriesRepository));
 app.use(createMovementsRouter(mongoExpensesRepository, mongoIncomesRepository));
 app.use(createCatalogRouter(mongoAccountsRepository, mongoCategoriesRepository));
 app.use(createOverviewRouter(mongoExpensesRepository, mongoIncomesRepository));

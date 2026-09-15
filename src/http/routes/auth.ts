@@ -1,12 +1,14 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import type { CategoriesRepository } from "../../domain/categories/repository.js";
+import { ensureDefaultCategories } from "../../domain/categories/seed.js";
 import type { UsersRepository } from "../../domain/users/repository.js";
 import { fail, HttpStatus, ok } from "../envelope.js";
 import { authMiddleware, signToken, type AuthedRequest } from "../middleware/auth.js";
 import { newId } from "../../infra/mongo/usersRepository.js";
 import { wrap } from "../wrap.js";
 
-export function createAuthRouter(users: UsersRepository) {
+export function createAuthRouter(users: UsersRepository, categories: CategoriesRepository) {
   const router = Router();
 
   router.post("/create-user", wrap(async (req, res) => {
@@ -21,13 +23,15 @@ export function createAuthRouter(users: UsersRepository) {
     }
 
     const passwordHash = await bcrypt.hash(String(password), 10);
+    const id = newId();
     await users.create({
-      id: newId(),
+      id,
       email,
       username,
       password,
       passwordHash
     });
+    await ensureDefaultCategories(categories, id);
 
     return ok(res, true, "Usuario criado com sucesso");
   }));

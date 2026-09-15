@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { AccountsRepository } from "../../domain/accounts/repository.js";
 import type { CategoriesRepository } from "../../domain/categories/repository.js";
+import { ensureDefaultCategories } from "../../domain/categories/seed.js";
 import { banks } from "../../infra/banks.js";
 import { fail, HttpStatus, ok } from "../envelope.js";
 import { authMiddleware, type AuthedRequest } from "../middleware/auth.js";
@@ -44,6 +45,7 @@ export function createCatalogRouter(
   router.get("/get-categories/", wrap(async (req, res) => {
     const authed = req as AuthedRequest;
     const tipo = req.query.tipo != null ? Number(req.query.tipo) : undefined;
+    await ensureDefaultCategories(categories, authed.userId, tipo);
     return ok(res, await categories.findAll(authed.userId, tipo));
   }));
 

@@ -25,6 +25,20 @@ export const mongoCategoriesRepository: CategoriesRepository = {
     return toPublic(category);
   },
 
+  async createMany(customerId, input) {
+    if (!input.length) return;
+
+    const categories = input.map((item) => ({
+      _id: uuid(),
+      customerId,
+      tipo: item.tipo,
+      nome: item.nome,
+      color: item.color
+    }));
+
+    await collection().insertMany(categories);
+  },
+
   async update(customerId, input) {
     const result = await collection().updateOne(
       { _id: input.id, customerId },
