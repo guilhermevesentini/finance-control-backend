@@ -16,18 +16,25 @@ import { fail, HttpStatus, ok } from "./http/envelope.js";
 
 const app = express();
 
-const corsOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  ...(process.env.CORS_ORIGIN ?? "")
+function parseCorsOrigins(): string[] {
+  const extras = (process.env.CORS_ORIGIN ?? "")
     .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean)
-];
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+
+  return [
+    ...new Set([
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://selfinancecontrol.netlify.app",
+      ...extras
+    ])
+  ];
+}
 
 app.use(
   cors({
-    origin: corsOrigins,
+    origin: parseCorsOrigins(),
     credentials: true
   })
 );
