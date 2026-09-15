@@ -1,5 +1,5 @@
 import "dotenv/config";
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
 import express from "express";
 import { connectMongo } from "./infra/mongo/client.js";
 import { createIndexes } from "./infra/mongo/indexes.js";
@@ -26,21 +26,26 @@ function parseCorsOrigins(): string[] {
     ...new Set([
       "http://localhost:5173",
       "http://localhost:5174",
-      "https://selfinancecontrol.netlify.app",
+      "https://selffinancecontrol.netlify.app",
       ...extras
     ])
   ];
 }
 
-app.use(
-  cors({
-    origin: parseCorsOrigins(),
-    credentials: true
-  })
-);
+const corsOptions: CorsOptions = {
+  origin: parseCorsOrigins(),
+  credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
-app.get("/health", (_req, res) => ok(res, { mongo: true }));
+let mongoReady = false;
+
+app.get("/health", (_req, res) => ok(res, { mongo: mongoReady }));
 
 app.use(createAuthRouter(mongoUsersRepository, mongoCategoriesRepository));
 app.use(createMovementsRouter(mongoExpensesRepository, mongoIncomesRepository));
@@ -54,14 +59,32 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
 
 const PORT = Number(process.env.PORT) || 7000;
 
-async function start() {
-  const db = await connectMongo();
-  await createIndexes(db);
-  console.log("Mongo connected:", db.databaseName);
+async function connectMongoWithRetry(): Promise<void> {
+  for (;;) {
+    try {
+      const db = await connectMongo();
+      await createIndexes(db);
+      mongoReady = true;
+      console.log("Mongo connected:", db.databaseName);
+      return;
+    } catch (error) {
+      mongoReady = false;
+      console.error("Falha ao conectar no MongoDB, tentando de novo em 5s", error);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
+}
 
-  app.listen(PORT, () => {
-    console.log(`API rodando em http://localhost:${PORT}`);
+async function start() {
+  await new Promise<void>((resolve, reject) => {
+    const server = app.listen(PORT, "0.0.0.0", () => {
+      console.log(`API rodando na porta ${PORT}`);
+      resolve();
+    });
+    server.on("error", reject);
   });
+
+  await connectMongoWithRetry();
 }
 
 start().catch((error) => {
