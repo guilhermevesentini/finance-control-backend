@@ -30,7 +30,7 @@ function parseCorsOrigins(): string[] {
     ...new Set([
       "http://localhost:5173",
       "http://localhost:5174",
-      "https://selffinancecontrol.netlify.app",
+      "https://selfinancecontrol.netlify.app",
       ...extras
     ])
   ];
@@ -58,7 +58,12 @@ function isAllowedOrigin(origin: string | undefined): boolean {
 
 const corsOptions: CorsOptions = {
   origin(origin, callback) {
-    callback(null, isAllowedOrigin(origin));
+    if (!isAllowedOrigin(origin)) {
+      callback(null, false);
+      return;
+    }
+
+    callback(null, origin || true);
   },
   credentials: true,
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
