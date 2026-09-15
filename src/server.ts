@@ -30,6 +30,7 @@ function parseCorsOrigins(): string[] {
     ...new Set([
       "http://localhost:5173",
       "http://localhost:5174",
+      "https://selffinancecontrol.netlify.app",
       "https://selfinancecontrol.netlify.app",
       ...extras
     ])
