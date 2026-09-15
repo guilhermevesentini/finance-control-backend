@@ -9,7 +9,7 @@
     "backend": "tsx src/server.ts",
     "dbackend": "tsx src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "tsx src/server.ts",
     "type-check": "tsc --noEmit"
   },
   "exports": {
@@ -22,7 +22,8 @@
     "express": "^4.21.1",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^7.6.0",
-    "uuid": "^11.0.3"
+    "uuid": "^11.0.3",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
@@ -33,7 +34,6 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.9.0",
     "nodemon": "^3.1.7",
-    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
 }
