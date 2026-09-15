@@ -16,27 +16,55 @@ import { fail, HttpStatus, ok } from "./http/envelope.js";
 
 const app = express();
 
+function normalizeOrigin(origin: string): string {
+  return origin.trim().replace(/\/$/, "");
+}
+
 function parseCorsOrigins(): string[] {
   const extras = (process.env.CORS_ORIGIN ?? "")
     .split(",")
-    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .map(normalizeOrigin)
     .filter(Boolean);
 
   return [
     ...new Set([
       "http://localhost:5173",
       "http://localhost:5174",
-      "https://selffinancecontrol.netlify.app",
+      "https://selfinancecontrol.netlify.app",
       ...extras
     ])
   ];
 }
 
+const allowedOrigins = parseCorsOrigins();
+
+function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) {
+    return true;
+  }
+
+  const normalized = normalizeOrigin(origin);
+  if (allowedOrigins.includes(normalized)) {
+    return true;
+  }
+
+  try {
+    const { hostname } = new URL(normalized);
+    return hostname === "localhost" || hostname.endsWith(".netlify.app");
+  } catch {
+    return false;
+  }
+}
+
 const corsOptions: CorsOptions = {
-  origin: parseCorsOrigins(),
+  origin(origin, callback) {
+    callback(null, isAllowedOrigin(origin));
+  },
   credentials: true,
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Customer-Id"],
+  optionsSuccessStatus: 204,
+  maxAge: 86400
 };
 
 app.use(cors(corsOptions));
@@ -45,6 +73,7 @@ app.use(express.json());
 
 let mongoReady = false;
 
+app.get("/", (_req, res) => ok(res, { ok: true, mongo: mongoReady }));
 app.get("/health", (_req, res) => ok(res, { mongo: mongoReady }));
 
 app.use(createAuthRouter(mongoUsersRepository, mongoCategoriesRepository));
@@ -79,6 +108,7 @@ async function start() {
   await new Promise<void>((resolve, reject) => {
     const server = app.listen(PORT, "0.0.0.0", () => {
       console.log(`API rodando na porta ${PORT}`);
+      console.log("CORS origins:", allowedOrigins.join(", "));
       resolve();
     });
     server.on("error", reject);
